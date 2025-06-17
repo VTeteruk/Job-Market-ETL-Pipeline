@@ -10,6 +10,7 @@ class JobType(Enum):
     INTERNSHIP = "internship"
     TEMPORARY = "temporary"
     FREELANCE = "freelance"
+    UNKNOWN = "unknown"
 
 
 class WorkplaceType(Enum):
