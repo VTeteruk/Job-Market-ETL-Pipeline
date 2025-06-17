@@ -1,3 +1,4 @@
+from core.settings import Settings
 from core.config import configure_logging
 from .scrapers.jobs_links_scraper import JobsLinksScraper
 
@@ -9,7 +10,7 @@ def main():
     """Main scraping function"""
     logger.info("Starting Profesia.sk job scraping...")
 
-    scraper = JobsLinksScraper("data/profesia_sk_jobs.csv")
+    scraper = JobsLinksScraper(f"{Settings.SCRAPED_DATA_FOLDER}/profesia_sk_jobs.csv")
 
     try:
         scraper.scrape_all_pages()

@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from typing import List, Set
 
 from core.config import configure_logging
+from core.settings import Settings
 from ..settings import BASE_URL, BASE_SEARCH_URL
 from .jobs_scraper import JobsScraper
 
@@ -53,5 +54,5 @@ class JobsLinksScraper(JobsScraper):
             page_num += 1
 
             # Add delay between page requests
-            time.sleep(1)
+            time.sleep(Settings.DRIVER_DELAY_BETWEEN_PAGINATION)
 
