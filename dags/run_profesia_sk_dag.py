@@ -1,11 +1,7 @@
-import os
-import sys
 from datetime import timedelta, datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from scrapers.profesiaSK.main import main
 
@@ -17,7 +13,7 @@ default_args = {
 
 with DAG(
     default_args=default_args,
-    dag_id="run_profesia_sk_v2",
+    dag_id="run_profesia_sk",
     start_date=datetime(2025, 6, 19),
     catchup=True,
     schedule_interval="@daily"
