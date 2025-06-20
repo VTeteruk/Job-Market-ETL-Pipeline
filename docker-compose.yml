@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15
+    image: postgres:13
     container_name: postgres
     restart: always
     environment:
@@ -11,49 +11,81 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   airflow-init:
-    image: apache/airflow:2.8.1
+    build: .
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/job_market_db
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: ''
+      # Pre-configure the PostgreSQL connection
+      AIRFLOW_CONN_LOCAL_POSTGRES: 'postgresql://airflow:airflow@postgres:5432/job_market_db'
     entrypoint: >
       /bin/bash -c "
       airflow db init &&
       airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
       "
     volumes:
+      - .:/opt/airflow/project
       - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+    user: "50000:0"
 
   airflow-webserver:
-    image: apache/airflow:2.8.1
+    build: .
     restart: always
     depends_on:
-      - postgres
       - airflow-init
     ports:
       - "8080:8080"
     environment:
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/job_market_db
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: ''
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      PYTHONPATH: /opt/airflow/project
+      # Pre-configure the PostgreSQL connection
+      AIRFLOW_CONN_LOCAL_POSTGRES: 'postgresql://airflow:airflow@postgres:5432/job_market_db'
     volumes:
+      - .:/opt/airflow/project
       - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
     command: webserver
+    user: "50000:0"
 
   airflow-scheduler:
-    image: apache/airflow:2.8.1
+    build: .
     restart: always
     depends_on:
       - airflow-webserver
     environment:
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/job_market_db
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: ''
+      PYTHONPATH: /opt/airflow/project
+      # Pre-configure the PostgreSQL connection
+      AIRFLOW_CONN_LOCAL_POSTGRES: 'postgresql://airflow:airflow@postgres:5432/job_market_db'
     volumes:
+      - .:/opt/airflow/project
       - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
     command: scheduler
+    user: "50000:0"
 
   pgadmin:
     image: dpage/pgadmin4
