@@ -9,6 +9,7 @@ services:
       POSTGRES_DB: job_market_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scraped_data:/var/lib/postgresql/csv_files
     ports:
       - "5432:5432"
     healthcheck:

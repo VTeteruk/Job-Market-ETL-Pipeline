@@ -13,8 +13,8 @@ class CSVManager:
     def __init__(self, filename: str):
         self.filename = "/opt/airflow/project/" + filename
         self.fieldnames = [
-            'url', 'title', 'company', 'location', 'job_type',
-            'workplace_type', 'experience_level', 'description',
+            'job_id', 'url', 'source', 'title', 'company', 'location',
+            'job_type', 'workplace_type', 'experience_level', 'description',
             'salary', 'posted_date', 'applicant_count', 'view_count'
         ]
         self._initialize_csv()
