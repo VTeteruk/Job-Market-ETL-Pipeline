@@ -4,6 +4,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
+from plugins.data_cleaning import clean_data
+
 default_args = {
     "owner": "Vlad",
     "retries": 2,
@@ -36,7 +38,7 @@ with DAG(
     )
 
     task3 = PostgresOperator(
-        task_id="from_csv_to_bronze_layer",
+        task_id="from_csv_to_bronze",
         postgres_conn_id="local_postgres",
         sql=get_sql_from_file("/opt/airflow/project/database_initialization_scripts/bronze_layer/ingest_data.sql").replace(
             "<file_name>",
@@ -44,4 +46,15 @@ with DAG(
         )
     )
 
-    task1 >> task2 >> task3
+    task4 = PostgresOperator(
+        task_id="create_silver_table",
+        postgres_conn_id="local_postgres",
+        sql=get_sql_from_file("/opt/airflow/project/database_initialization_scripts/silver_layer/init_table.sql")
+    )
+
+    task5 = PythonOperator(
+        task_id="from_bronze_to_silver",
+        python_callable=clean_data
+    )
+
+    task1 >> task2 >> task3 >> task4 >> task5
