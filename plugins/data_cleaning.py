@@ -106,22 +106,27 @@ def clean_data():
 
     df = df.withColumn(
         "description",
-        trim(col("description"))
+        trim(regexp_replace(col("description"), "\n", " "))
+    )
+
+    df = df.withColumn(
+        "description",
+        regexp_replace(col("description"), "Job description, responsibilities and duties ", "")
     )
 
     df = df.withColumn(
         "job_type",
-        regexp_replace(initcap(col("job_type")), "_", " ")
+        initcap(regexp_replace(col("job_type"), "_", " "))
     )
 
     df = df.withColumn(
         "workplace_type",
-        regexp_replace(initcap(col("workplace_type")), "_", " ")
+        initcap(regexp_replace(col("workplace_type"), "_", " "))
     )
 
     df = df.withColumn(
         "experience_level",
-        regexp_replace(initcap(col("experience_level")), "_", " ")
+        initcap(regexp_replace(col("experience_level"), "_", " "))
     )
 
     df.show()
