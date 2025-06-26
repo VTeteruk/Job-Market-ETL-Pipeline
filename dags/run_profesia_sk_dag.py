@@ -2,6 +2,7 @@ from datetime import timedelta, datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 from scrapers.profesiaSK.main import main
 
@@ -23,4 +24,13 @@ with DAG(
         python_callable=main
     )
 
-    task1
+    trigger_db_dag = TriggerDagRunOperator(
+        task_id="trigger_db_dag",
+        trigger_dag_id="db_dag",
+        wait_for_completion=False,
+        reset_dag_run=True,
+        execution_date="{{ ds }}",
+        dag=dag
+    )
+
+    task1 >> trigger_db_dag

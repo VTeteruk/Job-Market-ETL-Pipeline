@@ -63,5 +63,4 @@ with DAG(
         sql=get_sql_from_file("/opt/airflow/project/database_initialization_scripts/gold_layer/init_views.sql")
     )
 
-    task1 >> [task2, task4, task6]
-    task2 >> task3 >> task5
+    task1 >> task2 >> task3 >> task4 >> task5 >> task6
