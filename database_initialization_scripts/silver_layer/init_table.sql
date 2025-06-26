@@ -9,7 +9,7 @@ Notes   : Salary data is split into amount, currency, and period for structured 
 =====================================================
 */
 
-DROP TABLE IF EXISTS silver.jobs;
+DROP TABLE IF EXISTS silver.jobs CASCADE;
 
 CREATE TABLE silver.jobs (
 	job_id BIGINT PRIMARY KEY,
