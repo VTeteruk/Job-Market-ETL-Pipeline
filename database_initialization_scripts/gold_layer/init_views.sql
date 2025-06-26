@@ -37,9 +37,16 @@ GROUP BY location
 ORDER BY jobs_count DESC;
 
 
--- ====================
--- MARKET OVERVIEW VIEW
--- ====================
+/*
+===================
+MARKET OVERVIEW VIEW
+===================
+This view provides high-level market statistics, showing:
+- Total job postings and unique entities (companies, locations, titles)
+- Average monthly salary in EUR (normalized from different periods)
+- Average engagement metrics (applicants and views per job)
+- Date range of job postings (earliest to latest)
+*/
 CREATE OR REPLACE VIEW gold.market_overview AS
 SELECT
     COUNT(*) as total_jobs,
