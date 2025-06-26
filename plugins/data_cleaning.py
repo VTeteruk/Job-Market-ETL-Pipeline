@@ -66,6 +66,22 @@ def translate_salary_period(df: DataFrame) -> DataFrame:
         .otherwise(col("salary_period"))
     )
 
+
+def handle_nulls(df: DataFrame) -> DataFrame:
+    return df.fillna({
+        "location": "n/a",
+        "job_type": "n/a",
+        "workplace_type": "n/a",
+        "experience_level": "n/a",
+        "salary_currency": "n/a",
+        "salary_period": "n/a",
+        "company": "n/a",
+        "description": "n/a",
+        "applicant_count": 0,
+        "view_count": 0,
+    })
+
+
 def clean_data():
     spark = get_spark_session("DataCleaning")
     df = get_db_data(spark)
@@ -74,6 +90,7 @@ def clean_data():
     df = clean_location(df)
     df = clean_description(df)
     df = delete_underscores(df)
+    df = handle_nulls(df)
 
     df = translate_salary_period(df)
 
