@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 
@@ -30,7 +31,9 @@ class ExperienceLevel(Enum):
 
 @dataclass
 class Vacancy:
+    job_id: int
     url: str
+    source: str
     title: str
     company: str
     location: str
@@ -62,6 +65,19 @@ class Vacancy:
                 result[field_name] = field_value.value
             else:
                 # Keep other values as-is
-                result[field_name] = field_value
+                if field_name == "posted_date":
+                    result[field_name] = self._format_date(field_value)
+                else:
+                    result[field_name] = field_value
 
         return result
+
+    def _format_date(self, date_str: str) -> datetime.strptime:
+        """Convert dates like '17.6.2025' to '2025-06-17'"""
+        try:
+            return datetime.strptime(date_str.strip(), "%d.%m.%Y").strftime("%Y-%m-%d")
+        except Exception as e:
+            # Log or handle fallback (e.g. return None or original string)
+            print(f"⚠️ Date parse error: {date_str} → {e}")
+            return None
+

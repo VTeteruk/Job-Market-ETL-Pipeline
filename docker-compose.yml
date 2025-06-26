@@ -1,0 +1,173 @@
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: job_market_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scraped_data:/var/lib/postgresql/csv_files
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spark-network
+
+  # Spark Master
+  spark-master:
+    image: bitnami/spark:3.2
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    ports:
+      - "8081:8080"  # Spark Master Web UI
+      - "7077:7077"  # Spark Master port
+    volumes:
+      - ./spark-apps:/opt/bitnami/spark/apps
+      - ./scraped_data:/opt/bitnami/spark/data
+    networks:
+      - spark-network
+
+  # Spark Worker
+  spark-worker:
+    image: bitnami/spark:3.2
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    depends_on:
+      - spark-master
+    volumes:
+      - ./spark-apps:/opt/bitnami/spark/apps
+      - ./scraped_data:/opt/bitnami/spark/data
+    networks:
+      - spark-network
+
+  airflow-init:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/job_market_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: ''
+      # Pre-configure the PostgreSQL connection
+      AIRFLOW_CONN_LOCAL_POSTGRES: 'postgresql://airflow:airflow@postgres:5432/job_market_db'
+      # Pre-configure Spark connection
+      AIRFLOW_CONN_SPARK_DEFAULT: 'spark://spark-master:7077'
+    entrypoint: >
+      /bin/bash -c "
+      airflow db init &&
+      airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+      "
+    volumes:
+      - .:/opt/airflow/project
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./spark-apps:/opt/airflow/spark-apps
+    user: "50000:0"
+    networks:
+      - spark-network
+
+  airflow-webserver:
+    build: .
+    restart: always
+    depends_on:
+      - airflow-init
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/job_market_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: ''
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      PYTHONPATH: /opt/airflow/project
+      # Pre-configure the PostgreSQL connection
+      AIRFLOW_CONN_LOCAL_POSTGRES: 'postgresql://airflow:airflow@postgres:5432/job_market_db'
+      # Pre-configure Spark connection
+      AIRFLOW_CONN_SPARK_DEFAULT: 'spark://spark-master:7077'
+    volumes:
+      - .:/opt/airflow/project
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./spark-apps:/opt/airflow/spark-apps
+    command: webserver
+    user: "50000:0"
+    networks:
+      - spark-network
+
+  airflow-scheduler:
+    build: .
+    restart: always
+    depends_on:
+      - airflow-webserver
+    environment:
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/job_market_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: ''
+      PYTHONPATH: /opt/airflow/project
+      # Pre-configure the PostgreSQL connection
+      AIRFLOW_CONN_LOCAL_POSTGRES: 'postgresql://airflow:airflow@postgres:5432/job_market_db'
+      # Pre-configure Spark connection
+      AIRFLOW_CONN_SPARK_DEFAULT: 'spark://spark-master:7077'
+    volumes:
+      - .:/opt/airflow/project
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./spark-apps:/opt/airflow/spark-apps
+    command: scheduler
+    user: "50000:0"
+    networks:
+      - spark-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - spark-network
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  spark-network:
+    driver: bridge

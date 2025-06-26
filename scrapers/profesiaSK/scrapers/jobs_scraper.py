@@ -8,7 +8,7 @@ from core.schemas import Vacancy
 from core.csv_manager import CSVManager
 
 from .job_card_scraper import JobCardScraper
-from ..settings import HEADERS
+from ..settings import HEADERS, BASE_URL
 
 logger = configure_logging()
 
@@ -33,7 +33,7 @@ class JobsScraper(JobCardScraper):
             soup = BeautifulSoup(html_content, "html.parser")
             job_data = self.extract_job_data(soup)
 
-            vacancy = Vacancy(job_url, **job_data)
+            vacancy = Vacancy(url=job_url, job_id=self.scraped_count + 1, source=BASE_URL, **job_data)
             self.csv_manager.save_vacancy(vacancy)
             self.scraped_count += 1
 

@@ -2,3 +2,5 @@
 __pycache__
 venv
 downloaded_files
+logs
+artifacts

@@ -1,26 +1,55 @@
 import csv
 import os
 from typing import List
+
+from core.config import configure_logging
 from core.schemas import Vacancy
+
+
+logger = configure_logging()
 
 
 class CSVManager:
     def __init__(self, filename: str):
-        self.filename = filename
+        self.filename = "/opt/airflow/project/" + filename
         self.fieldnames = [
-            'url', 'title', 'company', 'location', 'job_type',
-            'workplace_type', 'experience_level', 'description',
+            'job_id', 'url', 'source', 'title', 'company', 'location',
+            'job_type', 'workplace_type', 'experience_level', 'description',
             'salary', 'posted_date', 'applicant_count', 'view_count'
         ]
         self._initialize_csv()
 
     def _initialize_csv(self):
         """Create CSV file with headers if it doesn't exist"""
-        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
+        absolute_path = os.path.abspath(self.filename)
+        logger.info(f"🔍 Initializing CSV file at: {absolute_path}")
+        logger.info(f"📁 Directory: {os.path.dirname(absolute_path)}")
+        logger.info(f"📄 Filename: {os.path.basename(absolute_path)}")
+        logger.info(f"💻 Current working directory: {os.getcwd()}")
 
-        with open(self.filename, 'w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writeheader()
+        # Створюємо директорію
+        directory = os.path.dirname(self.filename)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+            logger.info(f"📂 Directory created/verified: {os.path.abspath(directory)}")
+
+        # Створюємо файл
+        try:
+            with open(self.filename, 'w', newline='', encoding='utf-8') as file:
+                writer = csv.DictWriter(file, fieldnames=self.fieldnames)
+                writer.writeheader()
+
+            # Перевіряємо чи файл дійсно створився
+            if os.path.exists(self.filename):
+                file_size = os.path.getsize(self.filename)
+                logger.info(f"✅ CSV file successfully created! Size: {file_size} bytes")
+                logger.info(f"📊 File permissions: {oct(os.stat(self.filename).st_mode)[-3:]}")
+            else:
+                logger.error(f"❌ CSV file was not created at: {absolute_path}")
+
+        except Exception as e:
+            logger.error(f"💥 Error creating CSV file: {e}")
+            raise
 
     def save_vacancy(self, vacancy: Vacancy):
         """Save a single vacancy to CSV"""

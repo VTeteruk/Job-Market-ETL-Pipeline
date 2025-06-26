@@ -13,7 +13,7 @@ def get_text_from_tag(tag) -> str:
 
 class JobCardScraper:
     @staticmethod
-    def get_job_title(soup: BeautifulSoup) -> str | None:
+    def get_job_title(soup: BeautifulSoup) -> Optional[str]:
         try:
             return get_text_from_tag(soup.find("h1"))
         except Exception:
